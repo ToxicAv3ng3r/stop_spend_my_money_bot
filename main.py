@@ -1,8 +1,7 @@
 import os
 from datetime import datetime
-import logging
 
-from telegram import Bot, ReplyKeyboardMarkup
+from telegram import ReplyKeyboardMarkup
 from telegram.ext import Updater, Filters, MessageHandler, CommandHandler
 
 from dotenv import load_dotenv
@@ -70,6 +69,7 @@ def do_not_spend(update, context):
 
 
 def spend_it_anyway(update, context):
+    """Все равно потратить деньги."""
     chat = update.effective_chat
     button = ReplyKeyboardMarkup([
         ['/spend_money']
@@ -84,6 +84,7 @@ def spend_it_anyway(update, context):
 
 
 def create_expensive(update, context):
+    """Записать трату."""
     chat = update.effective_chat
     name = update.message.chat.first_name
     message = update.message.text
@@ -105,6 +106,7 @@ def create_expensive(update, context):
 
 
 def send_today_expensive(update, context):
+    """Отправить в чат сегодняшние траты."""
     chat = update.effective_chat
     name = update.message.chat.first_name
     dat = show_today_expensive(TODAY, name)

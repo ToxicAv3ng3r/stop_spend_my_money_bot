@@ -2,6 +2,7 @@ import sqlite3 as sq
 
 
 def create_db():
+    """Создание базы данных."""
     with sq.connect('expense.db') as con:
         cur = con.cursor()
         cur.execute("""CREATE TABLE IF NOT EXISTS users (
@@ -14,12 +15,14 @@ def create_db():
 
 
 def destroy_db():
+    """Уничтожение базы данных."""
     with sq.connect('expense.db') as con:
         cur = con.cursor()
         cur.execute("DROP TABLE IF EXISTS users")
 
 
 def write_expense(date, name, category, sum):
+    """Запись данных о трате в базу."""
     with sq.connect('expense.db') as con:
         cur = con.cursor()
         dat = [date, name, category, sum]
@@ -29,6 +32,7 @@ def write_expense(date, name, category, sum):
 
 
 def show_today_expensive(date, name):
+    """Выборка трат за день"""
     with sq.connect('expense.db') as con:
         cur = con.cursor()
         dat = [date, name]
