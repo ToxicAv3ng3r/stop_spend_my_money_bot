@@ -15,7 +15,7 @@ def create_db():
 
 
 def destroy_db():
-    """Уничтожение базы данных."""
+    """Уничтожение таблицы в базе данных."""
     with sq.connect('expense.db') as con:
         cur = con.cursor()
         cur.execute("DROP TABLE IF EXISTS users")
@@ -31,7 +31,7 @@ def write_expense(date, name, category, sum):
                     "values(?,?,?,?)", dat)
 
 
-def show_today_expensive(date, name):
+def show_spendings(date, name):
     """Выборка трат за день"""
     with sq.connect('expense.db') as con:
         cur = con.cursor()

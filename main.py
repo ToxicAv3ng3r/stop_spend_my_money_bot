@@ -1,12 +1,12 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from telegram import ReplyKeyboardMarkup
 from telegram.ext import Updater, Filters, MessageHandler, CommandHandler
 
 from dotenv import load_dotenv
 
-from db_func import create_db, write_expense, show_today_expensive
+from db_func import create_db, write_expense, show_spendings
 
 load_dotenv()
 create_db()
@@ -14,6 +14,44 @@ create_db()
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 
 TODAY = datetime.today().strftime('%Y-%m-%d')
+YESTERDAY = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+BUTTONS = ReplyKeyboardMarkup([
+        ['/spend_it_anyway'],
+        ['/do_not_spend'],
+        ['/show_spendings'],
+        ['/show_yesterday_spendings']
+    ],
+        resize_keyboard=True
+    )
+
+
+def send_message(update, context, date):
+    chat = update.effective_chat
+    name = update.message.chat.first_name
+    dat = show_spendings(date, name)
+    day = 'Сегодня'
+    if date == YESTERDAY:
+        day = 'Вчера'
+    text = f'{day} ты просрал кучу бабла:'
+    sum_expensive = 0
+    button = BUTTONS
+    if len(dat) != 0:
+        for row in dat:
+            text += f'\n {row[4]} на {row[3]}'
+            sum_expensive += row[4]
+        text += f'\n Итого.. {sum_expensive}'
+        context.bot.send_message(
+            chat_id=chat.id,
+            text=text,
+            reply_markup=button
+        )
+    else:
+        context.bot.send_message(
+            chat_id=chat.id,
+            text=(f'Итого {sum_expensive} \n'
+                  f'Ты еще ничего не потратил? Я сплю?'),
+            reply_markup=button
+        )
 
 
 def wake_up(update, context):
@@ -34,12 +72,7 @@ def wake_up(update, context):
 def spend_money(update, context):
     """Начать тратить деньги."""
     chat = update.effective_chat
-    buttons = ReplyKeyboardMarkup([
-        ['/spend_it_anyway'],
-        ['/do_not_spend']
-    ],
-        resize_keyboard=True
-    )
+    buttons = BUTTONS
     context.bot.send_message(
         chat_id=chat.id,
         text='ТЫ ОБАЛДЕЛ???',
@@ -54,7 +87,9 @@ def do_not_spend(update, context):
     """Не тратить деньги."""
     chat = update.effective_chat
     button = ReplyKeyboardMarkup([
-        ['/spend_money']
+        ['/spend_money'],
+        ['/show_spendings'],
+        ['/show_yesterday_spendings']
     ],
         resize_keyboard=True
     )
@@ -71,11 +106,7 @@ def do_not_spend(update, context):
 def spend_it_anyway(update, context):
     """Все равно потратить деньги."""
     chat = update.effective_chat
-    button = ReplyKeyboardMarkup([
-        ['/spend_money']
-    ],
-        resize_keyboard=True
-    )
+    button = BUTTONS
     context.bot.send_message(
         chat_id=chat.id,
         text='Эхх... Сколько на этот раз?',
@@ -92,12 +123,7 @@ def create_expensive(update, context):
     write_expense(datetime.now().strftime('%Y-%m-%d'),
                   name, values[1],
                   int(values[0]))
-    button = ReplyKeyboardMarkup([
-        ['/spend_money'],
-        ['/show_today_expensive']
-    ],
-        resize_keyboard=True
-    )
+    button = BUTTONS
     context.bot.send_message(
         chat_id=chat.id,
         text='Да ты столько не зарабатываешь',
@@ -105,28 +131,14 @@ def create_expensive(update, context):
     )
 
 
-def send_today_expensive(update, context):
+def send_today_spendings(update, context):
     """Отправить в чат сегодняшние траты."""
-    chat = update.effective_chat
-    name = update.message.chat.first_name
-    dat = show_today_expensive(TODAY, name)
-    text = 'Сегодня ты просрал кучу бабла:'
-    sum_expensive = 0
-    for row in dat:
-        text += f'\n {row[4]} на {row[3]}'
-        sum_expensive += row[4]
-    text += f'\n Итого.. {sum_expensive}'
-    button = ReplyKeyboardMarkup([
-        ['/spend_money'],
-        ['/show_today_expensive']
-    ],
-        resize_keyboard=True
-    )
-    context.bot.send_message(
-        chat_id=chat.id,
-        text=text,
-        reply_markup=button
-    )
+    send_message(update, context, TODAY)
+
+
+def send_yesterday_spendings(update, context):
+    """Отправить в чат вчерашние траты."""
+    send_message(update, context, YESTERDAY)
 
 
 def main():
@@ -138,8 +150,10 @@ def main():
                                                   do_not_spend))
     updater.dispatcher.add_handler(CommandHandler('spend_it_anyway',
                                                   spend_it_anyway))
-    updater.dispatcher.add_handler(CommandHandler('show_today_expensive',
-                                                  send_today_expensive))
+    updater.dispatcher.add_handler(CommandHandler('show_spendings',
+                                                  send_today_spendings))
+    updater.dispatcher.add_handler(CommandHandler('show_yesterday_spendings',
+                                                  send_yesterday_spendings))
     updater.dispatcher.add_handler(MessageHandler(Filters.text,
                                                   create_expensive))
     updater.start_polling()
