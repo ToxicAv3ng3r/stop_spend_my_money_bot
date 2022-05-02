@@ -33,7 +33,6 @@ BUTTONS = ReplyKeyboardMarkup([
 def send_message(update, context, date):
     chat = update.effective_chat
     name = update.message.chat.first_name
-    #  dat = show_spendings(date, name)
     day = 'Сегодня'
     if date == YESTERDAY:
         day = 'Вчера'
