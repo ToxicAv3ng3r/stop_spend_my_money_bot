@@ -6,7 +6,10 @@ from telegram.ext import Updater, Filters, MessageHandler, CommandHandler
 
 from dotenv import load_dotenv
 
-from db_func import create_db, write_expense, show_spendings
+from db_func import (create_db,
+                     write_expense,
+                     show_spendings,
+                     show_spendings_for_month)
 
 load_dotenv()
 create_db()
@@ -15,23 +18,30 @@ TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 
 TODAY = datetime.today().strftime('%Y-%m-%d')
 YESTERDAY = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+CURRENT_MONTH = datetime.today().strftime('%Y-%m')
 BUTTONS = ReplyKeyboardMarkup([
-        ['/spend_it_anyway'],
-        ['/do_not_spend'],
-        ['/show_spendings'],
-        ['/show_yesterday_spendings']
-    ],
-        resize_keyboard=True
-    )
+    ['/spend_it_anyway'],
+    ['/do_not_spend'],
+    ['/show_spendings'],
+    ['/show_yesterday_spendings'],
+    ['/show_current_mont_spendings']
+],
+    resize_keyboard=True
+)
 
 
 def send_message(update, context, date):
     chat = update.effective_chat
     name = update.message.chat.first_name
-    dat = show_spendings(date, name)
+    #  dat = show_spendings(date, name)
     day = 'Сегодня'
     if date == YESTERDAY:
         day = 'Вчера'
+    if date == CURRENT_MONTH:
+        day = 'В этом месяце'
+        dat = show_spendings_for_month(date, name)
+    else:
+        dat = show_spendings(date, name)
     text = f'{day} ты просрал кучу бабла:'
     sum_expensive = 0
     button = BUTTONS
@@ -89,7 +99,8 @@ def do_not_spend(update, context):
     button = ReplyKeyboardMarkup([
         ['/spend_money'],
         ['/show_spendings'],
-        ['/show_yesterday_spendings']
+        ['/show_yesterday_spendings'],
+        ['/show_current_mont_spendings']
     ],
         resize_keyboard=True
     )
@@ -120,7 +131,7 @@ def create_expensive(update, context):
     name = update.message.chat.first_name
     message = update.message.text
     values = message.split(' ')
-    write_expense(datetime.now().strftime('%Y-%m-%d'),
+    write_expense(TODAY,
                   name, values[1],
                   int(values[0]))
     button = BUTTONS
@@ -141,6 +152,11 @@ def send_yesterday_spendings(update, context):
     send_message(update, context, YESTERDAY)
 
 
+def send_current_mont_spendings(update, context):
+    """Отправить в чат траты за текущий месяц"""
+    send_message(update, context, CURRENT_MONTH)
+
+
 def main():
     updater = Updater(token=TELEGRAM_TOKEN)
     updater.dispatcher.add_handler(CommandHandler('start', wake_up))
@@ -154,6 +170,8 @@ def main():
                                                   send_today_spendings))
     updater.dispatcher.add_handler(CommandHandler('show_yesterday_spendings',
                                                   send_yesterday_spendings))
+    updater.dispatcher.add_handler(CommandHandler('show_current_mont_spendings',
+                                                  send_current_mont_spendings))
     updater.dispatcher.add_handler(MessageHandler(Filters.text,
                                                   create_expensive))
     updater.start_polling()
