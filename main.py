@@ -9,7 +9,8 @@ from dotenv import load_dotenv
 from db_func import (create_db,
                      write_expense,
                      show_spendings,
-                     show_spendings_for_month)
+                     show_spendings_for_month,
+                     show_spendings_for_past_month)
 
 load_dotenv()
 create_db()
@@ -19,35 +20,41 @@ TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TODAY = datetime.today().strftime('%Y-%m-%d')
 YESTERDAY = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 CURRENT_MONTH = datetime.today().strftime('%Y-%m')
+PAST_MONTH = (datetime.now() - timedelta(weeks=4)).strftime('%Y-%m')
 BUTTONS = ReplyKeyboardMarkup([
     ['/spend_it_anyway'],
     ['/do_not_spend'],
     ['/show_spendings'],
     ['/show_yesterday_spendings'],
-    ['/show_current_mont_spendings']
+    ['/show_current_month_spendings'],
+    ['/show_past_month_spendings']
 ],
     resize_keyboard=True
 )
 
 
 def send_message(update, context, date):
+    """Отправляет сообщение с тратами."""
     chat = update.effective_chat
     name = update.message.chat.first_name
-    day = 'Сегодня'
+    period = 'Сегодня'
     if date == YESTERDAY:
-        day = 'Вчера'
+        period = 'Вчера'
     if date == CURRENT_MONTH:
-        day = 'В этом месяце'
+        period = 'В этом месяце'
         dat = show_spendings_for_month(date, name)
+    elif date == PAST_MONTH:
+        period = 'В прошлом месяце'
+        dat = show_spendings_for_past_month(date, name)
     else:
         dat = show_spendings(date, name)
-    text = f'{day} ты просрал кучу бабла:'
+    text = f'{period} ты просрал кучу бабла:'
     sum_expensive = 0
     button = BUTTONS
     if len(dat) != 0:
         for row in dat:
-            text += f'\n {row[4]} на {row[3]}'
-            sum_expensive += row[4]
+            text += f'\n {row[0]} на {row[1]}'
+            sum_expensive += row[0]
         text += f'\n Итого.. {sum_expensive}'
         context.bot.send_message(
             chat_id=chat.id,
@@ -151,28 +158,44 @@ def send_yesterday_spendings(update, context):
     send_message(update, context, YESTERDAY)
 
 
-def send_current_mont_spendings(update, context):
-    """Отправить в чат траты за текущий месяц"""
+def send_current_month_spendings(update, context):
+    """Отправить в чат траты за текущий месяц."""
     send_message(update, context, CURRENT_MONTH)
+
+
+def send_past_month_spendings(update, context):
+    """Отправить в чат траты за прошлый месяц."""
+    send_message(update, context, PAST_MONTH)
 
 
 def main():
     updater = Updater(token=TELEGRAM_TOKEN)
-    updater.dispatcher.add_handler(CommandHandler('start', wake_up))
-    updater.dispatcher.add_handler(CommandHandler('spend_money',
-                                                  spend_money))
-    updater.dispatcher.add_handler(CommandHandler('do_not_spend',
-                                                  do_not_spend))
-    updater.dispatcher.add_handler(CommandHandler('spend_it_anyway',
-                                                  spend_it_anyway))
-    updater.dispatcher.add_handler(CommandHandler('show_spendings',
-                                                  send_today_spendings))
-    updater.dispatcher.add_handler(CommandHandler('show_yesterday_spendings',
-                                                  send_yesterday_spendings))
-    updater.dispatcher.add_handler(CommandHandler('show_current_mont_spendings',
-                                                  send_current_mont_spendings))
-    updater.dispatcher.add_handler(MessageHandler(Filters.text,
-                                                  create_expensive))
+    updater.dispatcher.add_handler(
+        CommandHandler('start', wake_up))
+    updater.dispatcher.add_handler(
+        CommandHandler('spend_money',
+                       spend_money))
+    updater.dispatcher.add_handler(
+        CommandHandler('do_not_spend',
+                       do_not_spend))
+    updater.dispatcher.add_handler(
+        CommandHandler('spend_it_anyway',
+                       spend_it_anyway))
+    updater.dispatcher.add_handler(
+        CommandHandler('show_spendings',
+                       send_today_spendings))
+    updater.dispatcher.add_handler(
+        CommandHandler('show_yesterday_spendings',
+                       send_yesterday_spendings))
+    updater.dispatcher.add_handler(
+        CommandHandler('show_current_month_spendings',
+                       send_current_month_spendings))
+    updater.dispatcher.add_handler(
+        CommandHandler('show_past_month_spendings',
+                       send_past_month_spendings))
+    updater.dispatcher.add_handler(
+        MessageHandler(Filters.text,
+                       create_expensive))
     updater.start_polling()
     updater.idle()
 

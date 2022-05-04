@@ -1,11 +1,5 @@
 import sqlite3 as sq
 
-from datetime import datetime, timedelta
-
-TODAY = datetime.today().strftime('%Y-%m-%d')
-YESTERDAY = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-MONTH = datetime.today().strftime('%Y-%m')
-
 
 def create_db():
     """Создание базы данных."""
@@ -43,7 +37,7 @@ def show_spendings(date, name):
         cur = con.cursor()
         dat = [date, name]
 
-        cur.execute("SELECT * FROM users "
+        cur.execute("SELECT sum, category FROM users "
                     "where date == (?) and name == (?)", dat)
         result = cur.fetchall()
         return result
@@ -55,9 +49,21 @@ def show_spendings_for_month(date, name):
         cur = con.cursor()
         dat = [date, name]
 
-        cur.execute("SELECT * FROM users where "
+        cur.execute("SELECT sum, category FROM users where "
                     "strftime('%Y-%m', date) == (?) and name == (?) "
                     "GROUP BY category, sum ORDER BY -sum", dat)
         result = cur.fetchall()
 
+        return result
+
+
+def show_spendings_for_past_month(date, name):
+    """Выборка трат за прошлый месяц"""
+    with sq.connect('expense.db') as con:
+        cur = con.cursor()
+        dat = [date, name]
+        cur.execute("SELECT sum, category FROM users where "
+                    "strftime('%Y-%m', date) == (?) and name == (?) "
+                    "GROUP BY sum ORDER BY -sum", dat)
+        result = cur.fetchall()
         return result
